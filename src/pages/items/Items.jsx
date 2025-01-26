@@ -76,7 +76,7 @@ export default function ItemsPage() {
   const fetchItems = async () => {
     setLoading(true); // Ativa o loading antes de começar a requisição
     try {
-      const response = await axios.get('http://localhost:5033/api/items');
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/Items`);
       setItems(response.data); // Atualiza o estado com os itens retornados da API
     } catch (error) {
       console.error('Erro ao buscar os itens:', error);
@@ -119,7 +119,7 @@ export default function ItemsPage() {
       // Percorre os IDs selecionados e dispara as requisições DELETE
       await Promise.all(
         selectedItems.map(async (id) => {
-          await axios.delete(`http://localhost:5033/api/items/${id}`);
+          await axios.delete(`${process.env.REACT_APP_API_URL}/Items/${id}`);
         })
       );
   
@@ -152,7 +152,7 @@ export default function ItemsPage() {
         }}
       >
         <InputBase
-          sx={{ ml: 1, flex: 1, fontSize: '1.5rem'}} // Aumenta o tamanho da fonte da pesquisa
+          sx={{ ml: 1, flex: 1, fontSize: '1.2rem'}} // Aumenta o tamanho da fonte da pesquisa
           placeholder="Pesquisar itens"
           inputProps={{ 'aria-label': 'search items' }}
           value={search}

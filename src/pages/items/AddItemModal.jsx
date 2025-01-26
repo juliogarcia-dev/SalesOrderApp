@@ -50,7 +50,7 @@ export default function AddItemModal({ open, onClose, onConfirm }) {
     if (name.trim() && price) {
       try {
         setLoading(true); // Ativa o loading
-        const { data: newItem } = await axios.post('http://localhost:5033/api/Items', {
+        const { data: newItem } = await axios.post(`${process.env.REACT_APP_API_URL}/Items`, {
           name,
           price,
         });
