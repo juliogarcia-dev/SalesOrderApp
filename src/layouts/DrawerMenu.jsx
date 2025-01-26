@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { styled, useTheme } from '@mui/material/styles';
 import {
@@ -102,15 +102,35 @@ const menuItems = [
 
 export default function DrawerMenu({ children }) {
   const theme = useTheme();
-  const navigate = useNavigate(); // Hook para navegação
+  const navigate = useNavigate();
   const [open, setOpen] = React.useState(false);
 
   const handleDrawerOpen = () => setOpen(true);
   const handleDrawerClose = () => setOpen(false);
 
   const handleMenuItemClick = (route) => {
-    navigate(route); // Navega para a rota ao clicar no item
+    navigate(route);
   };
+
+  useEffect(() => {
+    // Função para minimizar o drawer quando clicar fora dele, mas garantir que o clique no botão de menu não feche o drawer
+    const handleClickOutside = (event) => {
+      if (
+        open && 
+        !event.target.closest('#drawer') && 
+        !event.target.closest('[aria-label="open drawer"]') // Ignora o clique no botão de menu
+      ) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+
+    // Cleanup do evento ao desmontar o componente
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [open]); // Re-executa quando o estado 'open' muda
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -136,6 +156,7 @@ export default function DrawerMenu({ children }) {
         </Toolbar>
       </AppBar>
       <Drawer
+        id="drawer"
         variant="permanent"
         open={open}
         sx={{
@@ -170,7 +191,7 @@ export default function DrawerMenu({ children }) {
                     justifyContent: open ? 'initial' : 'center',
                     px: 2.5,
                   }}
-                  onClick={() => handleMenuItemClick(item.route)} // Navega para a rota
+                  onClick={() => handleMenuItemClick(item.route)}
                 >
                   <ListItemIcon
                     sx={{
@@ -203,7 +224,7 @@ export default function DrawerMenu({ children }) {
         }}
       >
         <DrawerHeader />
-        {children} {/* Aqui será renderizado o conteúdo da rota */}
+        {children}
       </Box>
     </Box>
   );
