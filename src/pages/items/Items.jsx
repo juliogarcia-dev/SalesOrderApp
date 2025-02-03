@@ -162,13 +162,11 @@ export default function ItemsPage() {
   const fetchItemsBySearch = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/Items`, {
-        params: {
-          search, // Passa o valor da pesquisa como parâmetro na requisição
-        },
-      });
+      const url = `${process.env.REACT_APP_API_URL}/Items`;
+      const config = search ? { params: { search } } : {}; // Condiciona a inclusão do parâmetro
+      const response = await axios.get(url, config);
       setItems(response.data);
-      setOriginalItems(response.data); // Atualiza os itens originais
+      setOriginalItems(response.data);
     } catch (error) {
       console.error('Erro ao buscar itens:', error);
     } finally {
