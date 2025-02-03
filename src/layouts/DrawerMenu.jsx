@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { styled, useTheme } from '@mui/material/styles';
 import {
@@ -15,6 +15,7 @@ import {
   Toolbar,
   Typography,
   AppBar as MuiAppBar,
+  useMediaQuery,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -76,12 +77,14 @@ const AppBar = styled(MuiAppBar, {
 }));
 
 const Drawer = styled(MuiDrawer, {
-  shouldForwardProp: (prop) => prop !== 'open',
-})(({ theme, open }) => ({
+  shouldForwardProp: (prop) => prop !== 'open' && prop !== 'mobile',
+})(({ theme, open, mobile }) => ({
   width: drawerWidth,
   flexShrink: 0,
   whiteSpace: 'nowrap',
   boxSizing: 'border-box',
+  position: mobile ? 'absolute' : 'fixed',
+  height: '100vh',
   ...(open && {
     ...openedMixin(theme),
     '& .MuiDrawer-paper': openedMixin(theme),
@@ -103,13 +106,23 @@ const menuItems = [
 export default function DrawerMenu({ children }) {
   const theme = useTheme();
   const navigate = useNavigate();
-  const [open, setOpen] = React.useState(false);
+  const isMobile = useMediaQuery('(max-width:600px)'); // Detecta se é mobile
+  const [open, setOpen] = useState(!isMobile); // Inicia fechado no mobile, aberto no desktop
+  const drawerRef = useRef(null);
 
-  const handleDrawerOpen = () => setOpen(true);
+  const handleDrawerOpen = () => {
+    if (isMobile) {
+      setOpen(prevOpen => !prevOpen); // Alterna o estado no mobile
+    } else {
+      setOpen(true); // Apenas abre no desktop
+    }
+  };
+  
   const handleDrawerClose = () => setOpen(false);
 
   const handleMenuItemClick = (route) => {
     navigate(route);
+    if (isMobile) setOpen(false); // Fecha automaticamente no mobile
   };
 
   useEffect(() => {
@@ -140,12 +153,12 @@ export default function DrawerMenu({ children }) {
           <IconButton
             color="inherit"
             aria-label="open drawer"
-            onClick={handleDrawerOpen}
+            onClick={handleDrawerOpen} // Agora a abertura do Drawer acontece ao clicar
             edge="start"
             sx={{
               marginRight: 5,
               color: '#1DB954',
-              ...(open && { display: 'none' }),
+              ...(open && { display: 'none' }), // Esconde o botão quando o drawer está aberto
             }}
           >
             <MenuIcon />
@@ -156,9 +169,11 @@ export default function DrawerMenu({ children }) {
         </Toolbar>
       </AppBar>
       <Drawer
+        ref={drawerRef}
         id="drawer"
         variant="permanent"
         open={open}
+        mobile={isMobile} // Passamos se é mobile para ajustar o estilo
         sx={{
           '& .MuiDrawer-paper': {
             backgroundColor: '#282828',
@@ -221,6 +236,12 @@ export default function DrawerMenu({ children }) {
           backgroundColor: '#ECECEC',
           color: '#FFFFFF',
           minHeight: '100vh',
+          transition: theme.transitions.create('margin', {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.enteringScreen,
+          }),
+          marginLeft: open && !isMobile ? `${drawerWidth}px` : 0, // Empurra conteúdo no desktop
+          ...(isMobile && open ? { opacity: 0.3 } : {}), // Escurece fundo ao abrir no mobile
         }}
       >
         <DrawerHeader />

@@ -99,8 +99,14 @@ export default function AddItemModal({ open, onClose, onConfirm, selectedItem, i
     <Modal
       open={open}
       onClose={onClose}
-      aria-labelledby="modal-title"
-      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      aria-labelledby="modal-title"      
+      disableScrollLock // Impede que o modal desative o scroll da página
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'auto', // Permite rolagem no modal
+      }}
     >
       <Box sx={style}>
         <CloseButton onClick={onClose}>

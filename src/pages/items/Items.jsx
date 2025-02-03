@@ -3,6 +3,7 @@ import Paper from '@mui/material/Paper';
 import InputBase from '@mui/material/InputBase';
 import IconButton from '@mui/material/IconButton';
 import SearchIcon from '@mui/icons-material/Search';
+import Fab from '@mui/material/Fab';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -10,11 +11,10 @@ import Grid2 from '@mui/material/Grid2';
 import Typography from '@mui/material/Typography';
 import ButtonBase from '@mui/material/ButtonBase';
 import { styled } from '@mui/material/styles';
-import CircularProgress from '@mui/material/CircularProgress';
+import { Box, CircularProgress } from '@mui/material';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Button from '@mui/material/Button';
 import axios from 'axios';
@@ -79,32 +79,40 @@ const ItemCard = ({ item, selected, onSelect }) => (
 export default function ItemsPage() {
   const [search, setSearch] = useState('');
   const [items, setItems] = useState([]);
+  const [originalItems, setOriginalItems] = useState([]); // Armazena os itens originais
   const [selectedItems, setSelectedItems] = useState([]);
   const [isModalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [isDialogOpen, setDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);  // Adicionado para controlar o item selecionado para edição
-
-  const fetchItems = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/Items`);
-      setItems(response.data);
-    } catch (error) {
-      console.error('Erro ao buscar os itens:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [openDialog, setOpenDialog] = useState(false);
 
   useEffect(() => {
+    const fetchItems = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.get(`${process.env.REACT_APP_API_URL}/Items`);
+        setItems(response.data);
+        setOriginalItems(response.data); // Armazena os itens originais
+      } catch (error) {
+        console.error('Erro ao buscar os itens:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchItems();
   }, []);
 
-  const filteredItems = items.filter((item) =>
-    item.name.toLowerCase().includes(search.toLowerCase())
-  );
+  // Filtra os itens em memória conforme o usuário digita
+  useEffect(() => {
+    if (search) {
+      const filteredItems = originalItems.filter((item) =>
+        item.name.toLowerCase().includes(search.toLowerCase())
+      );
+      setItems(filteredItems);
+    } else {
+      setItems(originalItems); // Restaura a lista completa se a pesquisa estiver vazia
+    }
+  }, [search, originalItems]);
 
   const handleSelect = (id) => {
     setSelectedItems((prev) =>
@@ -114,196 +122,164 @@ export default function ItemsPage() {
 
   const handleAdd = () => {
     setIsEditMode(false);
-    setSelectedItem(null);  // Reseta a seleção ao adicionar um item
+    setSelectedItems([]);
     setModalOpen(true);
   };
 
   const handleEdit = () => {
     if (selectedItems.length === 1) {
-      const selectedItem = items.find(item => item.id === selectedItems[0]);
-      setIsEditMode(true);  // Muda para o modo de edição
-      setSelectedItem(selectedItem);  // Armazena o item selecionado
+      setIsEditMode(true);
       setModalOpen(true);
     }
   };
 
-  const handleModalConfirm = async (name, price) => {
-    if (name.trim() && price) {
-      try {
-        setLoading(true);
-        if (selectedItem) {
-          // Atualiza o item
-          await axios.put(`${process.env.REACT_APP_API_URL}/Items/${selectedItem.Id}`, {
-            name,
-            price,
-          });
-          fetchItems();  // Atualiza a lista de itens após a edição
-        } else {
-          // Adiciona um novo item
-          const { data: newItem } = await axios.post(`${process.env.REACT_APP_API_URL}/Items`, {
-            name,
-            price,
-          });
-          setItems((prevItems) => [...prevItems, newItem]);  // Adiciona o novo item à lista
-        }
-        setLoading(false);
-        setModalOpen(false);  // Fecha o modal
-      } catch (error) {
-        console.error('Erro ao salvar item:', error);
-        setLoading(false);
-      }
-    } else {
-      console.error('Nome e preço são obrigatórios.');
-    }
+  const handleDelete = () => {
+    setOpenDialog(true);
   };
 
-  const handleModalClose = () => {
-    setModalOpen(false);
-    fetchItems();
-  };
-
-  const handleDelete = async () => {
-    if (selectedItems.length === 0) return;
-
+  const confirmDelete = async () => {
     try {
       await Promise.all(
         selectedItems.map(async (id) => {
           await axios.delete(`${process.env.REACT_APP_API_URL}/Items/${id}`);
         })
       );
-
       setItems((prevItems) => prevItems.filter((item) => !selectedItems.includes(item.id)));
+      setOriginalItems((prevItems) => prevItems.filter((item) => !selectedItems.includes(item.id)));
       setSelectedItems([]);
-      console.log('Itens excluídos com sucesso');
     } catch (error) {
       console.error('Erro ao excluir itens:', error);
+    } finally {
+      setOpenDialog(false);
     }
   };
 
-  const handleDialogOpen = () => {
-    setDialogOpen(true);
+  const cancelDelete = () => {
+    setOpenDialog(false);
   };
 
-  const handleDialogClose = () => {
-    setDialogOpen(false);
+  // Função que busca os itens filtrados no banco de dados
+  const fetchItemsBySearch = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/Items`, {
+        params: {
+          search, // Passa o valor da pesquisa como parâmetro na requisição
+        },
+      });
+      setItems(response.data);
+      setOriginalItems(response.data); // Atualiza os itens originais
+    } catch (error) {
+      console.error('Erro ao buscar itens:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const confirmDelete = () => {
-    handleDialogClose();
-    handleDelete();
+  // Função para lidar com a tecla "Enter" no campo de pesquisa
+  const handleKeyPress = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault(); // Impede o envio do formulário
+      fetchItemsBySearch(); // Executa a pesquisa
+    }
   };
 
   return (
     <div>
       <Paper
         component="form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          fetchItems();
-        }}
+        onSubmit={(e) => e.preventDefault()} // Impede o envio do formulário
         sx={{
+          position: 'fixed',
+          top: 100,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '40%',
+          maxWidth: '600px',
+          minWidth: '250px',
           display: 'flex',
           alignItems: 'center',
-          maxWidth: '50%',
-          width: '100%',
-          minWidth: '300px',
-          mb: 4,
-          mt: 4,
-          mx: 'auto',
+          paddingLeft: '1.5rem',
+          backgroundColor: 'white',
+          boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)',
+          zIndex: 1000,
+          bottom: 'auto',
+          overflow: 'hidden',
+          '@media (max-width: 600px)': {
+            left: '58%',
+            width: '70%',
+          },
         }}
       >
         <InputBase
           sx={{ ml: 1, flex: 1, fontSize: '1.2rem' }}
           placeholder="Pesquisar itens"
-          inputProps={{ 'aria-label': 'search items' }}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          onKeyPress={handleKeyPress} // Adiciona o listener para a tecla "Enter"
         />
-        <IconButton type="button" sx={{ p: '20px', fontSize: '2.5rem' }} aria-label="search" onClick={fetchItems}>
+        <IconButton type="button" sx={{ p: '20px' }} aria-label="search" onClick={fetchItemsBySearch}>
           <SearchIcon />
         </IconButton>
-        <IconButton
-          type="button"
-          sx={{ p: '20px', color: '#1DB954', fontSize: '2.5rem' }}
-          aria-label="add item"
-          onClick={handleAdd}
-        >
-          <AddIcon />
-        </IconButton>
-        {selectedItems.length > 0 && (
-          <>
-            <IconButton
-              type="button"
-              sx={{ p: '20px', color: '#ffa500', fontSize: '2.5rem' }}
-              aria-label="edit items"
-              onClick={handleEdit}
-            >
-              <EditIcon />
-            </IconButton>
-            <IconButton
-              type="button"
-              sx={{ p: '20px', color: '#ff0000', fontSize: '2.5rem' }}
-              aria-label="delete items"
-              onClick={handleDialogOpen}
-            >
-              <DeleteIcon />
-            </IconButton>
-          </>
-        )}
       </Paper>
 
       {loading ? (
-        <div
-          style={{
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            position: 'relative',
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            height: '100vh' 
           }}
         >
           <CircularProgress />
-        </div>
+        </Box>
       ) : (
-        <Grid2 container spacing={4}>
-          {filteredItems.map((item) => (
+        <Grid2 container spacing={4} justifyContent="center" sx={{ paddingTop: '140px',  
+          '@media (max-width: 600px)': {
+          left: '50%',
+          transform: 'translateX(9%)',
+        }, }} >
+          {items.map((item) => (
             <Grid2 item key={item.id} xs={12} sm={6} md={4}>
-              <ItemCard
-                item={item}
-                selected={selectedItems.includes(item.id)}
-                onSelect={handleSelect}
-              />
+              <ItemCard item={item} selected={selectedItems.includes(item.id)} onSelect={handleSelect} />
             </Grid2>
           ))}
         </Grid2>
       )}
 
+      <Fab color="success" sx={{ position: 'fixed', bottom: 16, right: 16 }} onClick={handleAdd} >
+        <AddIcon />
+      </Fab>
+      {selectedItems.length > 0 && (
+        <>
+          <Fab color="warning" sx={{ position: 'fixed', bottom: 80, right: 16 }} onClick={handleEdit}>
+            <EditIcon />
+          </Fab>
+          <Fab color="error" sx={{ position: 'fixed', bottom: 144, right: 16 }} onClick={handleDelete}>
+            <DeleteIcon />
+          </Fab>
+        </>
+      )}
+
       <AddItemModal
         open={isModalOpen}
-        onClose={handleModalClose}
-        onConfirm={handleModalConfirm}
-        selectedItem={selectedItem}
+        onClose={() => setModalOpen(false)}
+        onConfirm={() => setModalOpen(false)}
+        selectedItem={items.find((item) => item.id === selectedItems[0])}
         isEditMode={isEditMode}
       />
 
-      <Dialog
-        open={isDialogOpen}
-        onClose={handleDialogClose}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">Confirma a exclusão?</DialogTitle>
+      <Dialog open={openDialog} onClose={cancelDelete} disableScrollLock>
+        <DialogTitle>Confirmar Exclusão</DialogTitle>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            Essa ação não pode ser desfeita.
-          </DialogContentText>
+          <Typography>Tem certeza que deseja excluir os itens selecionados?</Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDialogClose} color="primary">
+          <Button onClick={cancelDelete} color="primary">
             Cancelar
           </Button>
-          <Button onClick={confirmDelete} color="secondary" autoFocus>
+          <Button onClick={confirmDelete} color="error">
             Confirmar
           </Button>
         </DialogActions>
