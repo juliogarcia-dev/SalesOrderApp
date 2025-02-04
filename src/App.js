@@ -21,7 +21,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/items" element={<Items />} />            
-            <Route path="/orders/addorder" element={<AddOrder />} /> {/* Nova rota */}            
+            <Route path="/orders/" element={<AddOrder />} /> {/* Nova rota */}            
           </Routes>
         </DrawerMenu>
       </Router>

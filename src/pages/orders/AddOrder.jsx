@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -30,9 +29,7 @@ function createData(id, name, price, quantity) {
 
 // Cabeçalho da tabela
 const headCells = [
-  { id: 'name', numeric: false, label: 'Nome do Item' },
-  { id: 'price', numeric: true, label: 'Preço (R$)' },
-  { id: 'quantity', numeric: true, label: 'Quantidade' },
+  { id: 'name', numeric: false, label: 'Nome do Item' }  
 ];
 
 // Componente do cabeçalho da tabela
@@ -55,12 +52,12 @@ function EnhancedTableHead({ order, orderBy, onRequestSort, selectedCount, rowCo
           <TableCell
             key={headCell.id}
             align={headCell.numeric ? 'right' : 'left'}
-            sortDirection={orderBy === headCell.id ? order : false}
+            sortDirection={orderBy === headCell.id ? order : false}           
           >
             <TableSortLabel
               active={orderBy === headCell.id}
               direction={orderBy === headCell.id ? order : 'asc'}
-              onClick={createSortHandler(headCell.id)}
+              onClick={createSortHandler(headCell.id)}              
             >
               {headCell.label}
             </TableSortLabel>
@@ -99,8 +96,7 @@ function EnhancedTableToolbar({ selected, onDelete }) {
 export default function AddOrder() {
   const [clientes, setClientes] = useState([]);
   const [clienteSelecionado, setClienteSelecionado] = useState(null);
-  const [itens, setItens] = useState([]);
-  const [itemSelecionado, setItemSelecionado] = useState(null);
+  const [itens, setItens] = useState([]);  
   const [rows, setRows] = useState([]);
   const [selected, setSelected] = useState([]);
   const [order, setOrder] = useState('asc');
@@ -109,6 +105,9 @@ export default function AddOrder() {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [loadingClientes, setLoadingClientes] = useState(false);
   const [loadingItens, setLoadingItens] = useState(false);
+  const itemSearchRef = useRef(null); // Cria uma referência para o campo de pesquisa
+  const [searchText, setSearchText] = useState(""); // Estado para o texto digitado
+  const [selectedItem, setSelectedItem] = useState(null); // Estado para o item selecionado
 
   // Busca clientes com debounce
   useEffect(() => {
@@ -127,27 +126,61 @@ export default function AddOrder() {
     return () => clearTimeout(debounceTimer);
   }, [clienteSelecionado]);
 
-  // Busca itens com debounce
   useEffect(() => {
-    if (itemSelecionado) return;
+    // Verifica se o termo de busca tem mais de 3 caracteres
+    if (!searchText || searchText.length < 3) {
+        setItens([]); // Limpa a lista de itens se o termo for muito curto
+        return;
+    }
 
+    // Configura o debounce
     const debounceTimer = setTimeout(() => {
-      if (itemSelecionado === null) {
         setLoadingItens(true);
-        axios.get(`${process.env.REACT_APP_API_URL}/Itens`, { params: { search: itemSelecionado } })
-          .then((response) => setItens(response.data))
-          .catch((error) => console.error('Erro ao buscar itens:', error))
-          .finally(() => setLoadingItens(false));
-      }
-    }, 1000);
+        axios.get(`${process.env.REACT_APP_API_URL}/Items/search`, { params: { name: searchText } })
+            .then((response) => setItens(response.data))
+            .catch((error) => console.error('Erro ao buscar itens:', error))
+            .finally(() => setLoadingItens(false));
+    }, 1000); // 1 segundo de debounce
 
+    // Limpa o timeout anterior se o termo de busca mudar
     return () => clearTimeout(debounceTimer);
-  }, [itemSelecionado]);
+  }, [searchText]);
+
+  const handleFocus = () => {
+    if (itemSearchRef.current) {
+      // Verifica se é um dispositivo móvel (largura menor que 768px)
+      const isMobile = window.innerWidth < 768;
+  
+      if (isMobile) {
+        // Adiciona um pequeno atraso para garantir que a renderização da página tenha sido concluída
+        setTimeout(() => {
+          itemSearchRef.current.scrollIntoView({
+            behavior: 'smooth',       
+            block: 'start',  // Garante que o campo seja exibido no topo da tela
+          });
+        }, 200); // 200ms de atraso
+      }
+    }
+  };
 
   // Adiciona item ao grid
   const handleAddItem = (item) => {
     const newRow = createData(item.id, item.name, item.price, 1);
-    setRows([...rows, newRow]);
+    setRows([...rows, newRow]);    
+  };
+
+  // Atualiza o texto digitado no campo de pesquisa
+  const handleInputChange = (event, newValue) => {
+    setSearchText(newValue);
+  };
+  
+  // Atualiza o item selecionado e adiciona à grid
+  const handleItemSelect = (event, selectedItem) => {
+    if (selectedItem) {
+        handleAddItem(selectedItem);
+        setSelectedItem(null); // Limpa o item selecionado
+        setSearchText(""); // Limpa o texto do campo de pesquisa
+    }
   };
 
   // Ordenação
@@ -209,135 +242,150 @@ export default function AddOrder() {
     })
     .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
-  return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="subtitle2" gutterBottom sx={{ color: '#1DB954' }}>
-        <Link
-         component={Link}
-          to="/orders" 
-          style={{
-            textDecoration: 'none', // Remove o sublinhado padrão
-            color: '#1DB954', // Mantém a cor verde       
-          }}                   
+    return (
+      <Box sx={{ 
+        p: { xs: 2, sm: 10 }, // Padding menor em telas pequenas
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        minHeight: '100vh',
+        width: '100%',              
+      }}>
+        {/* Dados do Cliente */}
+        <Paper sx={{ 
+          p: 3, 
+          mb: 3, 
+          width: '100%', 
+          maxWidth: {sm: '800px' } // Ajusta o maxWidth para telas pequenas
+        }}       
         >
-          Pedidos
-        </Link >
-        {' > '}
-        <Box
-          component="span"
-          sx={{ textDecoration: 'underline' }} // Sublinhado para "Adicionar Pedido"
+          <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
+            Dados do Cliente
+          </Typography>
+          <Autocomplete
+            options={clientes}
+            getOptionLabel={(cliente) => cliente.nome}
+            loading={loadingClientes}
+            onInputChange={(event, newValue) => setClienteSelecionado(newValue)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Buscar Cliente"
+                variant="outlined"
+                fullWidth
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {loadingClientes ? <CircularProgress size={20} /> : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
+          />
+        </Paper>
+    
+        {/* Adicionar Itens */}
+        <Paper sx={{ 
+          p: 3, 
+          mb: 3, 
+          width: '100%', 
+          maxWidth: { sm: '800px' } // Ajusta o maxWidth para telas pequenas
+        }}        
         >
-          Adicionar Pedido
-        </Box>
-      </Typography>
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Dados do Cliente
-        </Typography>
-        <Autocomplete
-          options={clientes}
-          getOptionLabel={(cliente) => cliente.nome}
-          loading={loadingClientes}
-          onInputChange={(event, newValue) => setClienteSelecionado(newValue)}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label="Buscar Cliente"
-              variant="outlined"
-              fullWidth
-              InputProps={{
-                ...params.InputProps,
-                endAdornment: (
-                  <>
-                    {loadingClientes ? <CircularProgress size={20} /> : null}
-                    {params.InputProps.endAdornment}
-                  </>
-                ),
-              }}
-            />
-          )}
-        />
-      </Paper>
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Adicionar Itens
-        </Typography>
-        <Autocomplete
-          options={itens}
-          getOptionLabel={(item) => item.name}
-          loading={loadingItens}
-          onInputChange={(event, newValue) => setItemSelecionado(newValue)}
-          onChange={(event, selectedItem) => {
-            if (selectedItem) {
-              handleAddItem(selectedItem);
-            }
-          }}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label="Buscar Item"
-              variant="outlined"
-              fullWidth
-              InputProps={{
-                ...params.InputProps,
-                endAdornment: (
-                  <>
-                    {loadingItens ? <CircularProgress size={20} /> : null}
-                    {params.InputProps.endAdornment}
-                  </>
-                ),
-              }}
-            />
-          )}
-        />
-      </Paper>
-      <Paper sx={{ p: 3 }}>
-        <EnhancedTableToolbar selected={selected} onDelete={handleDeleteSelected} />
-        <TableContainer>
-          <Table>
-            <EnhancedTableHead
-              order={order}
-              orderBy={orderBy}
-              onRequestSort={handleRequestSort}
-              selectedCount={selected.length}
-              rowCount={rows.length}
-              onSelectAllClick={handleSelectAllClick}
-            />
-            <TableBody>
-              {visibleRows.map((row) => {
-                const isSelected = selected.includes(row.id);
-                return (
-                  <TableRow
-                    hover
-                    onClick={(event) => handleClick(event, row.id)}
-                    role="checkbox"
-                    aria-checked={isSelected}
-                    tabIndex={-1}
-                    key={row.id}
-                    selected={isSelected}
-                  >
-                    <TableCell padding="checkbox">
-                      <Checkbox checked={isSelected} />
-                    </TableCell>
-                    <TableCell>{row.name}</TableCell>
-                    <TableCell align="right">{row.price.toFixed(2)}</TableCell>
-                    <TableCell align="right">{row.quantity}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={rows.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
-      </Paper>
-    </Box>
-  );
+          <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
+            Adicionar Itens
+          </Typography>
+          <Autocomplete
+            options={itens}
+            getOptionLabel={(item) => item.name}
+            loading={loadingItens}
+            value={selectedItem} // Usa o item selecionado
+            inputValue={searchText} // Usa o texto digitado
+            onInputChange={handleInputChange} // Atualiza o texto digitado
+            onChange={handleItemSelect} // Atualiza o item selecionado
+            listbox={{
+              sx: {
+                  maxHeight: 300, // Define a altura máxima da caixa de resultados
+                  overflow: 'auto', // Adiciona scroll se necessário
+              },
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Buscar Item"
+                variant="outlined"
+                fullWidth        
+                ref={itemSearchRef} // Referência para o Paper
+                onFocus={handleFocus} // Rola a página ao focar no campo                        
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {loadingItens ? <CircularProgress size={20} /> : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
+          />
+        </Paper>
+    
+        {/* Tabela de Itens */}
+        <Paper sx={{ 
+          p: 3, 
+          width: '100%', 
+          maxWidth: {sm: '800px' } // Ajusta o maxWidth para telas pequenas
+        }}>
+          <EnhancedTableToolbar selected={selected} onDelete={handleDeleteSelected} />
+          <TableContainer> {/* Permite rolagem horizontal */}
+            <Table>
+              <EnhancedTableHead
+                order={order}
+                orderBy={orderBy}
+                onRequestSort={handleRequestSort}
+                selectedCount={selected.length}
+                rowCount={rows.length}
+                onSelectAllClick={handleSelectAllClick}
+              />
+              <TableBody>
+                {visibleRows.map((row) => {
+                  const isSelected = selected.includes(row.id);
+                  return (
+                    <TableRow
+                      hover
+                      onClick={(event) => handleClick(event, row.id)}
+                      role="checkbox"
+                      aria-checked={isSelected}
+                      tabIndex={-1}
+                      key={row.id}
+                      selected={isSelected}
+                    >
+                      <TableCell padding="checkbox">
+                        <Checkbox checked={isSelected} />
+                      </TableCell>
+                      <TableCell>{row.name}</TableCell>
+                      <TableCell align="right">{row.price.toFixed(2)}</TableCell>
+                      <TableCell align="right">{row.quantity}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={rows.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+          />
+        </Paper>
+      </Box>
+    );
 }
