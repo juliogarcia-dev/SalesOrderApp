@@ -89,6 +89,9 @@ const Drawer = styled(MuiDrawer, {
     ...openedMixin(theme),
     '& .MuiDrawer-paper': openedMixin(theme),
   }),
+  ...(!open && mobile && {
+    display: 'none', // Oculta o drawer completamente no mobile quando minimizado
+  }),
   ...(!open && {
     ...closedMixin(theme),
     '& .MuiDrawer-paper': closedMixin(theme),
@@ -107,7 +110,7 @@ export default function DrawerMenu({ children }) {
   const theme = useTheme();
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:600px)'); // Detecta se é mobile
-  const [open, setOpen] = useState(!isMobile); // Inicia fechado no mobile, aberto no desktop
+  const [open, setOpen] = useState(false); // Inicia fechado no mobile, aberto no desktop
   const drawerRef = useRef(null);
 
   const handleDrawerOpen = () => {
@@ -129,7 +132,7 @@ export default function DrawerMenu({ children }) {
     // Função para minimizar o drawer quando clicar fora dele, mas garantir que o clique no botão de menu não feche o drawer
     const handleClickOutside = (event) => {
       if (
-        open && 
+        open && isMobile &&
         !event.target.closest('#drawer') && 
         !event.target.closest('[aria-label="open drawer"]') // Ignora o clique no botão de menu
       ) {
@@ -143,7 +146,7 @@ export default function DrawerMenu({ children }) {
     return () => {
       document.removeEventListener('click', handleClickOutside);
     };
-  }, [open]); // Re-executa quando o estado 'open' muda
+  }, [open, isMobile]); // Re-executa quando o estado 'open' muda
 
   return (
     <Box sx={{ display: 'flex' }}>
