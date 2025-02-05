@@ -229,7 +229,7 @@ export default function ItemsPage() {
         <CircularProgress />
       </Box>
     ) : (
-    <Box sx={{ width: '100%', maxWidth: { xs: '70%', md: '95%' }, height: 'calc(80vh - 140px)', overflow: 'auto' }}>
+    <Box sx={{ width: '100%', maxWidth: { xs: '100%', md: '95%' }, height: 'calc(80vh - 140px)', overflow: 'auto' }}>
       <Grid2 container spacing={4} justifyContent="center">
         {items.map((item) => (
           <Grid2 item key={item.id} xs={12} sm={6} md={4}>
