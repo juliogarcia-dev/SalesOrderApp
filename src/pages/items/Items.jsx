@@ -11,7 +11,7 @@ import Grid2 from '@mui/material/Grid2';
 import Typography from '@mui/material/Typography';
 import ButtonBase from '@mui/material/ButtonBase';
 import { styled } from '@mui/material/styles';
-import { Box, CircularProgress } from '@mui/material';
+import { Box, CircularProgress, Pagination } from '@mui/material';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -19,12 +19,13 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Button from '@mui/material/Button';
 import axios from 'axios';
 import AddItemModal from './AddItemModal';
+import { useMediaQuery, useTheme } from "@mui/material";
 
 const Img = styled('img')({
   width: '100%',
   height: 'auto',
   maxWidth: '100%',
-  objectFit: 'cover'
+  objectFit: 'cover',
 });
 
 const ItemCard = ({ item, selected, onSelect }) => (
@@ -86,15 +87,11 @@ export default function ItemsPage() {
   const [isModalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [openDialog, setOpenDialog] = useState(false); 
-
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'; // Impede rolagem da página
-  
-    return () => {
-      document.body.style.overflow = ''; // Restaura a rolagem ao desmontar o componente
-    };
-  }, []);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [page, setPage] = useState(1);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md")); // Verifica se a tela é menor que MD
+  const itemsPerPage = isMobile ? 6 : 14;
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -167,12 +164,11 @@ export default function ItemsPage() {
     setOpenDialog(false);
   };
 
-  // Função que busca os itens filtrados no banco de dados
   const fetchItemsBySearch = async () => {
     setLoading(true);
     try {
       const url = `${process.env.REACT_APP_API_URL}/Items`;
-      const config = search ? { params: { search } } : {}; // Condiciona a inclusão do parâmetro
+      const config = search ? { params: { search } } : {};
       const response = await axios.get(url, config);
       setItems(response.data);
       setOriginalItems(response.data);
@@ -183,112 +179,125 @@ export default function ItemsPage() {
     }
   };
 
-  // Função para lidar com a tecla "Enter" no campo de pesquisa
   const handleKeyPress = (event) => {
     if (event.key === 'Enter') {
-      event.preventDefault(); // Impede o envio do formulário
-      fetchItemsBySearch(); // Executa a pesquisa
+      event.preventDefault();
+      fetchItemsBySearch();
     }
   };
 
+  // Paginação
+  const paginatedItems = items.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100vh', height:'100vh', overflow: 'hidden'}}>
-  {/* Box para o campo de pesquisa */}
-  <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', mb: 4, mt: 4 }} >
-    <Paper
-      component="form"
-      onSubmit={(e) => e.preventDefault()}
-      sx={{
-        width: '40%',
-        maxWidth: '600px',
-        minWidth: '250px',
-        display: 'flex',
-        alignItems: 'center',
-        paddingLeft: '1.5rem',
-        boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)',
-        mb: 2,
-      }}
-    >
-      <InputBase
-        sx={{ ml: 1, flex: 1, fontSize: '1.2rem' }}
-        placeholder="Pesquisar itens"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        onKeyDown={handleKeyPress}
-      />
-      <IconButton type="button" sx={{ p: '20px' }} aria-label="search" onClick={fetchItemsBySearch}>
-        <SearchIcon />
-      </IconButton>
-    </Paper>
-  </Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', overflow: 'hidden' }}>
+      {/* Campo de pesquisa no canto superior esquerdo */}
+      <Box sx={{ width: '100%', display: 'flex',position: 'fixed', justifyContent:'center', alignItems: 'center', paddingTop: 4, zIndex: 1000 }}>
+        <Paper
+          component="form"
+          onSubmit={(e) => e.preventDefault()}
+          sx={{
+            width: '40%',
+            maxWidth: '600px',
+            minWidth: '250px',
+            display: 'flex',
+            alignItems: 'center',
+            paddingLeft: '1.5rem',
+            boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)',
+          }}
+        >
+          <InputBase
+            sx={{ ml: 1, flex: 1, fontSize: '1.2rem' }}
+            placeholder="Pesquisar itens"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={handleKeyPress}
+          />
+          <IconButton type="button" sx={{ p: '20px' }} aria-label="search" onClick={fetchItemsBySearch}>
+            <SearchIcon />
+          </IconButton>
+        </Paper>
 
-  {/* Box para a grid */}
-  <Box sx={{ width: '100%', flexGrow: 1, display: 'flex', justifyContent: 'center' }}>
-    {loading ? (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-        <CircularProgress />
+        {/* Botões no canto superior direito */}
+        <Box sx={{
+                position: { xs: 'fixed', md: 'absolute' }, // Usamos absolute para posicionar em relação ao contêiner pai
+                right: { xs: 16, md: 'calc(40% - 15rem)' }, // Distância da direita (40% é a largura do campo de pesquisa)
+                bottom: { xs: '1rem', md: 'auto' }, // No mobile, fica no canto inferior
+                top: { xs: 'auto', md: '2.2rem' }, // Em telas maiores, fica no canto superior
+                display: 'flex',
+                gap: 2,
+                zIndex: 1000,
+                justifyContent: 'flex-end',
+                flexDirection: { xs: 'column', md: 'row' }, // Coluna no mobile, linha em telas maiores                
+            }}>
+              
+          <Fab color="success" onClick={handleAdd} sx={{position: {md: 'absolute'}}}>
+            <AddIcon />
+          </Fab>
+          {selectedItems.length > 0 && (
+            <>
+              <Fab color="warning" onClick={handleEdit} sx={{left: {md: '9rem'}}}>
+                <EditIcon />
+              </Fab>
+              <Fab color="error" onClick={handleDelete} sx={{left: {md: '9rem'}}}>
+                <DeleteIcon />
+              </Fab>
+            </>
+          )}
+        </Box>
       </Box>
-    ) : (
-    <Box sx={{ width: '100%', maxWidth: { xs: '100%', md: '95%' }, height: 'calc(80vh - 140px)', overflow: 'auto' }}>
-      <Grid2 container spacing={4} justifyContent="center">
-        {items.map((item) => (
-          <Grid2 item key={item.id} xs={12} sm={6} md={4}>
-            <ItemCard item={item} selected={selectedItems.includes(item.id)} onSelect={handleSelect} />
-          </Grid2>
-        ))}
-      </Grid2>
+
+      {/* Grid com paginação */}
+      <Box sx={{ width: '100%', flexGrow: 1, display: 'flex', justifyContent: 'center', paddingTop: {xs: '9rem', md:'10rem'}}}>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Box sx={{ width: '100%', maxWidth: '90%'}}>
+            <Grid2 container spacing={4} justifyContent="center">
+              {paginatedItems.map((item) => (
+                <Grid2 item key={item.id} >
+                  <ItemCard item={item} selected={selectedItems.includes(item.id)} onSelect={handleSelect} />
+                </Grid2>
+              ))}
+            </Grid2>
+            {/* Paginação */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: '1rem', mt: '1.5rem', ml: {xs: '1rem'},maxWidth: {xs:'90%', md: '100%'}}}>
+              <Pagination
+                count={Math.ceil(items.length / itemsPerPage)}
+                page={page}
+                onChange={(_, newPage) => setPage(newPage)}
+                color="success"
+              />
+            </Box>
+          </Box>
+        )}
+      </Box>
+
+      {/* Modal e Dialog */}
+      <AddItemModal
+        open={isModalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={() => setModalOpen(false)}
+        selectedItem={items.find((item) => item.id === selectedItems[0])}
+        isEditMode={isEditMode}
+      />
+
+      <Dialog open={openDialog} onClose={cancelDelete} disableScrollLock>
+        <DialogTitle>Confirmar Exclusão</DialogTitle>
+        <DialogContent>
+          <Typography>Tem certeza que deseja excluir os itens selecionados?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cancelDelete} color="primary">
+            Cancelar
+          </Button>
+          <Button onClick={confirmDelete} color="error">
+            Confirmar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
-    )}
-  </Box>
-
-  <Box
-  sx={{        
-    position: { xs: 'fixed', md: 'relative' },
-    bottom: { xs: 20, md: 0 },
-    right: { xs: 16, md: '50%' },
-    transform: { md: 'translateX(50%)' },
-    width: { md: '100%' }, 
-    flexGrow: 2, 
-    display: 'flex', 
-    justifyContent: { xs: 'flex-end', md: 'center' },  
-    gap: 2,
-    flexDirection: { xs: 'column', md: 'row' }, 
-  }}
-    >
-  <Fab color="success" onClick={handleAdd}>
-    <AddIcon />
-  </Fab>
-  {selectedItems.length > 0 && (
-    <>
-      <Fab color="warning" onClick={handleEdit}>
-        <EditIcon />
-      </Fab>
-      <Fab color="error" onClick={handleDelete}>
-        <DeleteIcon />
-      </Fab>
-    </>
-  )}
-</Box>
-
-  {/* Modal e Dialog */}
-  <AddItemModal
-    open={isModalOpen}
-    onClose={() => setModalOpen(false)}
-    onConfirm={() => setModalOpen(false)}
-    selectedItem={items.find((item) => item.id === selectedItems[0])}
-    isEditMode={isEditMode}
-  />
-
-  <Dialog open={openDialog} onClose={cancelDelete} disableScrollLock>
-    <DialogTitle>Confirmar Exclusão</DialogTitle>
-    <DialogContent>
-      <Typography>Tem certeza que deseja excluir os itens selecionados?</Typography>
-    </DialogContent>
-    <DialogActions>
-      <Button onClick={cancelDelete} color="primary">Cancelar</Button>
-      <Button onClick={confirmDelete} color="error">Confirmar</Button>
-    </DialogActions>
-  </Dialog>
-</Box>
   );
 }

@@ -247,8 +247,7 @@ export default function AddOrder() {
         p: { xs: 2, sm: 10 }, // Padding menor em telas pequenas
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        minHeight: '100vh',
+        alignItems: 'center',        
         width: '100%',              
       }}>
         {/* Dados do Cliente */}
