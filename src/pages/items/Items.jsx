@@ -94,10 +94,10 @@ export default function ItemsPage() {
   const itemsPerPage = isMobile ? 6 : 14;
 
   useEffect(() => {
-    const fetchItems = async () => {
+    const fetchItems = async () => {      
       setLoading(true);
       try {
-        const response = await axios.get(`${process.env.REACT_APP_API_URL}/Items`);
+        const response = await axios.get(`${process.env.REACT_APP_API_URL}/Items`);        
         setItems(response.data);
         setOriginalItems(response.data);
       } catch (error) {
@@ -106,8 +106,13 @@ export default function ItemsPage() {
         setLoading(false);
       }
     };
-    fetchItems();
+    fetchItems();    
   }, []);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setSelectedItems([]); // Rola suavemente para o topo
+  }, [page]);
 
   useEffect(() => {
     if (search) {
@@ -165,7 +170,8 @@ export default function ItemsPage() {
   };
 
   const fetchItemsBySearch = async () => {
-    setLoading(true);
+    setSelectedItems([]);
+    setLoading(true);    
     try {
       const url = `${process.env.REACT_APP_API_URL}/Items`;
       const config = search ? { params: { search } } : {};
@@ -223,7 +229,7 @@ export default function ItemsPage() {
                 position: { xs: 'fixed', md: 'absolute' }, // Usamos absolute para posicionar em relação ao contêiner pai
                 right: { xs: 16, md: 'calc(40% - 15rem)' }, // Distância da direita (40% é a largura do campo de pesquisa)
                 bottom: { xs: '1rem', md: 'auto' }, // No mobile, fica no canto inferior
-                top: { xs: 'auto', md: '2.2rem' }, // Em telas maiores, fica no canto superior
+                top: { xs: 'auto', md: '2.3rem' }, // Em telas maiores, fica no canto superior
                 display: 'flex',
                 gap: 2,
                 zIndex: 1000,
@@ -263,12 +269,12 @@ export default function ItemsPage() {
               ))}
             </Grid2>
             {/* Paginação */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', mb: '1rem', mt: '1.5rem', ml: {xs: '1rem'},maxWidth: {xs:'90%', md: '100%'}}}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: '1rem', mt: '1.5rem', ml: {xs: '1rem'}, maxWidth: {xs:'90%', md: '100%'}}}>
               <Pagination
                 count={Math.ceil(items.length / itemsPerPage)}
                 page={page}
                 onChange={(_, newPage) => setPage(newPage)}
-                color="success"
+                color="success"                
               />
             </Box>
           </Box>
